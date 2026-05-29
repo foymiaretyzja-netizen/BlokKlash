@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blok Klash</title>
+    <style>
+        /* Basic styling to center the game on the screen and make it look clean */
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: sans-serif;
+        }
+
+        #gameCanvas {
+            background-color: #000000;
+            border: 4px solid #333;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <script src="sys/control.js"></script>
+    <script src="sys/background.js"></script>
+    <script src="sys/player.js"></script>
+    <script src="sys/player2.js"></script>
+    <script src="sys/attack.js"></script>
+    <script src="sys/combo.js"></script>
+    <script src="sys/damage.js"></script>
+    <script src="sys/effect.js"></script>
+    <script src="sys/titlescreen.js"></script>
+
+    <script>
+        window.onload = () => {
+            console.log("Blok Klash loaded successfully!");
+            // This is where we will eventually call the function to show the title screen
+            // e.g., showTitleScreen();
+        };
+    </script>
+
+</body>
+</html>
