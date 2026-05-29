@@ -12,22 +12,34 @@
             background-color: #1a1a1a;
             color: white;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
             font-family: sans-serif;
+            user-select: none; /* Prevents accidental text selection while mashing keys */
         }
 
         #gameCanvas {
             background-color: #000000;
             border: 4px solid #333;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            cursor: pointer;
+        }
+
+        .debug-hint {
+            margin-top: 10px;
+            color: #666;
+            font-size: 12px;
         }
     </style>
 </head>
 <body>
 
     <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <div class="debug-hint">Tip: Hitboxes are active! To see them, uncomment AttackSystem.drawDebug(ctx) in the script.</div>
+
+    <script src="sys/maps/sewers.js"></script>
 
     <script src="sys/control.js"></script>
     <script src="sys/background.js"></script>
@@ -41,9 +53,84 @@
 
     <script>
         window.onload = () => {
-            console.log("Blok Klash loaded successfully!");
-            // This is where we will eventually call the function to show the title screen
-            // e.g., showTitleScreen();
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+
+            console.log("Blok Klash Engine: Initializing Subsystems...");
+            
+            // Initialize all imported decoupled game systems
+            TitleScreen.init(canvas);
+            AttackSystem.init();
+            ComboSystem.init();
+            DamageSystem.init();
+            EffectSystem.init();
+            
+            // Initialize player default coordinates and attributes
+            Player1.init();
+            Player2.init();
+
+            console.log("Blok Klash Engine: All Core Systems Online!");
+
+            // Master Engine Loop running at a targeted 60 frames per second
+            function gameLoop() {
+                // BRANCH 1: Active Combat Session State Execution
+                if (TitleScreen.currentScreen === 'PLAYING') {
+                    
+                    // --- 1. CORE PHYSICS & DATA ENGINE UPDATES ---
+                    Player1.update();
+                    Player2.update();
+                    AttackSystem.update();
+                    ComboSystem.update();
+                    DamageSystem.update(); // Intersects hitboxes, drops shields, applies penalties
+                    EffectSystem.update(); // Drives visual particles & screen shake timers
+
+                    // --- 2. COMBAT LIFE CYCLE CHECKS (WIN / LOSS SCENARIOS) ---
+                    if (Player1.health <= 0) {
+                        TitleScreen.triggerGameOver('p2'); // Player 2 Wins
+                    } else if (Player2.health <= 0) {
+                        TitleScreen.triggerGameOver('p1'); // Player 1 Wins
+                    }
+
+                    // --- 3. RENDERING STEP PIPELINE ---
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    // Apply visual shake offset to everything drawn below it
+                    EffectSystem.applyShake(ctx);
+
+                    // Draw the underground acid environment layer
+                    if (typeof MapSewers !== 'undefined') {
+                        MapSewers.draw(ctx, canvas.width, canvas.height);
+                    }
+
+                    // Draw the player geometry blocks and weapon markers
+                    Player1.draw(ctx);
+                    Player2.draw(ctx);
+
+                    // DEBUG VISUALIZER: Uncomment this line to see real-time collision boundaries
+                    // AttackSystem.drawDebug(ctx);
+
+                    // Paint floating damage particles and shield rings over the players
+                    EffectSystem.draw(ctx);
+
+                    // Reset the canvas matrix back to normal coordinates
+                    EffectSystem.clearShake(ctx);
+
+                    // Render HUD Health Meters static on top of screen space transformations
+                    TitleScreen.drawCombatHUD(ctx, canvas.width);
+
+                } 
+                // BRANCH 2: Interface Menu State Execution (TITLE, STAGE SELECT, SETTINGS, GAME OVER)
+                else {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    TitleScreen.draw(ctx, canvas.width, canvas.height);
+                }
+
+                // Call the loop again on the next monitor refresh cycle
+                requestAnimationFrame(gameLoop);
+            }
+
+            // Start the engine loop sequence
+            requestAnimationFrame(gameLoop);
         };
     </script>
 
