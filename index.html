@@ -4,43 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blok Klash</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&display=swap" rel="stylesheet">
+    
     <style>
-        /* Basic styling to center the game on the screen and make it look clean */
+        /* Fullscreen Reset */
         body {
             margin: 0;
             padding: 0;
-            background-color: #1a1a1a;
+            background-color: #000;
             color: white;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            font-family: sans-serif;
-            user-select: none; /* Prevents accidental text selection while mashing keys */
+            width: 100vw;
+            overflow: hidden; /* Prevents scrollbars from appearing */
+            font-family: 'Bungee', sans-serif; /* Blocky font applied globally */
+            user-select: none;
         }
 
+        /* Canvas stretched to fill the exact window size */
         #gameCanvas {
-            background-color: #000000;
-            border: 4px solid #333;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            display: block;
+            background-color: #111; /* Darker void to replace the arcade box */
             cursor: pointer;
         }
 
+        /* Float the logo perfectly over the canvas */
+        #gameLogo {
+            position: absolute;
+            top: 10%;
+            max-width: 500px; /* Adjust this if your logo is too big/small */
+            width: 80%;
+            display: none; /* Hidden by default, JS controls this */
+            pointer-events: none; /* Lets you click the canvas 'through' the image */
+            /* Applies the light red and light blue blocky aesthetic */
+            filter: drop-shadow(4px 4px 0px #ff7675) drop-shadow(-4px -4px 0px #74b9ff);
+            z-index: 10;
+        }
+
+        /* Adjusted to float over the new fullscreen layout */
         .debug-hint {
-            margin-top: 10px;
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
             color: #666;
             font-size: 12px;
+            pointer-events: none;
+            z-index: 10;
         }
     </style>
 </head>
 <body>
 
-    <canvas id="gameCanvas" width="800" height="600"></canvas>
+    <img id="gameLogo" src="assets/logo.png" alt="Blok Klash Logo">
+
+    <canvas id="gameCanvas"></canvas>
     <div class="debug-hint">Tip: Hitboxes are active! To see them, uncomment AttackSystem.drawDebug(ctx) in the script.</div>
 
     <script src="sys/maps/sewers.js"></script>
-
     <script src="sys/control.js"></script>
     <script src="sys/background.js"></script>
     <script src="sys/player.js"></script>
@@ -55,82 +78,75 @@
         window.onload = () => {
             const canvas = document.getElementById('gameCanvas');
             const ctx = canvas.getContext('2d');
+            const logoElement = document.getElementById('gameLogo');
+
+            // --- FULLSCREEN CANVAS RESIZER ---
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas(); // Trigger immediately to set initial size
 
             console.log("Blok Klash Engine: Initializing Subsystems...");
             
-            // Initialize all imported decoupled game systems
             TitleScreen.init(canvas);
             AttackSystem.init();
             ComboSystem.init();
             DamageSystem.init();
             EffectSystem.init();
             
-            // Initialize player default coordinates and attributes
             Player1.init();
             Player2.init();
 
             console.log("Blok Klash Engine: All Core Systems Online!");
 
-            // Master Engine Loop running at a targeted 60 frames per second
             function gameLoop() {
-                // BRANCH 1: Active Combat Session State Execution
+                // Toggle the HTML Logo ON during the title screen, and OFF everywhere else
+                if (TitleScreen.currentScreen === 'TITLE') {
+                    logoElement.style.display = 'block';
+                } else {
+                    logoElement.style.display = 'none';
+                }
+
                 if (TitleScreen.currentScreen === 'PLAYING') {
                     
-                    // --- 1. CORE PHYSICS & DATA ENGINE UPDATES ---
                     Player1.update();
                     Player2.update();
                     AttackSystem.update();
                     ComboSystem.update();
-                    DamageSystem.update(); // Intersects hitboxes, drops shields, applies penalties
-                    EffectSystem.update(); // Drives visual particles & screen shake timers
+                    DamageSystem.update(); 
+                    EffectSystem.update(); 
 
-                    // --- 2. COMBAT LIFE CYCLE CHECKS (WIN / LOSS SCENARIOS) ---
                     if (Player1.health <= 0) {
-                        TitleScreen.triggerGameOver('p2'); // Player 2 Wins
+                        TitleScreen.triggerGameOver('p2'); 
                     } else if (Player2.health <= 0) {
-                        TitleScreen.triggerGameOver('p1'); // Player 1 Wins
+                        TitleScreen.triggerGameOver('p1'); 
                     }
 
-                    // --- 3. RENDERING STEP PIPELINE ---
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                    // Apply visual shake offset to everything drawn below it
                     EffectSystem.applyShake(ctx);
 
-                    // Draw the underground acid environment layer
                     if (typeof MapSewers !== 'undefined') {
                         MapSewers.draw(ctx, canvas.width, canvas.height);
                     }
 
-                    // Draw the player geometry blocks and weapon markers
                     Player1.draw(ctx);
                     Player2.draw(ctx);
-
-                    // DEBUG VISUALIZER: Uncomment this line to see real-time collision boundaries
-                    // AttackSystem.drawDebug(ctx);
-
-                    // Paint floating damage particles and shield rings over the players
                     EffectSystem.draw(ctx);
-
-                    // Reset the canvas matrix back to normal coordinates
                     EffectSystem.clearShake(ctx);
-
-                    // Render HUD Health Meters static on top of screen space transformations
                     TitleScreen.drawCombatHUD(ctx, canvas.width);
 
-                } 
-                // BRANCH 2: Interface Menu State Execution (TITLE, STAGE SELECT, SETTINGS, GAME OVER)
-                else {
+                } else {
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
                     TitleScreen.draw(ctx, canvas.width, canvas.height);
                 }
 
-                // Call the loop again on the next monitor refresh cycle
                 requestAnimationFrame(gameLoop);
             }
 
-          // Start the engine loop sequence
-             requestAnimationFrame(gameLoop); 
+            requestAnimationFrame(gameLoop); 
         };
     </script>
 
